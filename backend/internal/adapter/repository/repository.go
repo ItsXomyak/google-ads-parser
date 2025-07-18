@@ -27,3 +27,29 @@ func (r *DomainRepository) GetAll() ([]model.Domain, error) {
 	err := r.db.Order("created_at DESC").Find(&domains).Error
 	return domains, err
 }
+
+func (r *DomainRepository) DeleteByID(id uint) error {
+	return r.db.Delete(&model.Domain{}, id).Error
+}
+
+func (r *DomainRepository) GetPaginated(domain string, limit, offset int) ([]model.Domain, int64, error) {
+	var domains []model.Domain
+	var total int64
+
+	query := r.db.Model(&model.Domain{})
+
+	if domain != "" {
+		query = query.Where("domain ILIKE ?", "%"+domain+"%")
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	err := query.Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&domains).Error
+
+	return domains, total, err
+}

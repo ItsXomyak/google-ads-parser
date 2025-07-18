@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
@@ -8,15 +10,22 @@ import (
 	"parser/internal/handler"
 	"parser/internal/model"
 	usecase "parser/internal/usecase"
-	connect "parser/pkg/postgres"
+	"parser/pkg/postgres"
 )
 func Run() {
 	_ = godotenv.Load()
 
-	db, err := connect.NewPostgresConnection()
-	if err != nil {
-		panic(err)
-	}
+		db, err := postgres.NewPostgresConnection()
+    if err != nil {
+        log.Fatal("Failed to connect to database:", err)
+    }
+
+    if err := postgres.TestConnection(db); err != nil {
+        log.Fatal("Database connection test failed:", err)
+    }
+
+		log.Println("Connected to database successfully")
+
 
 	_ = db.AutoMigrate(&model.Domain{})
 
@@ -28,6 +37,7 @@ func Run() {
 
 	r.POST("/domains", h.PostDomains)
 	r.GET("/domains", h.GetDomains)
+	r.DELETE("/domains/:id", h.DeleteDomain)
 
 	r.Run(":8080")
 }

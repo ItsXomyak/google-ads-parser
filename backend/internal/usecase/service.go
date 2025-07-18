@@ -21,3 +21,11 @@ func (s *DomainService) Save(domain *model.Domain) error {
 func (s *DomainService) GetAll() ([]model.Domain, error) {
 	return s.repo.GetAll()
 }
+
+func (s *DomainService) DeleteByID(id uint) error {
+	return s.repo.DeleteByID(id)
+}
+
+func (s *DomainService) GetPaginated(domain string, limit, offset int) ([]model.Domain, int64, error) {
+	return s.repo.GetPaginated(domain, limit, offset)
+}
