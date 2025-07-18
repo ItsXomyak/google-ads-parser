@@ -1,19 +1,24 @@
-FROM golang:alpine as modules
-COPY go.mod go.sum /modules/
-WORKDIR /modules
+# syntax=docker/dockerfile:1.4
+FROM golang:1.23-alpine AS builder
+
+WORKDIR /app
+
+# Установим зависимости
+COPY go.mod go.sum ./
 RUN go mod download
 
+# Копируем исходники
+COPY . .
 
-FROM golang:alpine as builder
-COPY --from=modules /go/pkg /go/pkg
-COPY . /app
+# Собираем бинарник
+RUN go build -o app ./cmd
+
+# Минимальный рантайм-образ
+FROM alpine:latest
 WORKDIR /app
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -tags migrate -o /bin/app ./cmd/app
 
-FROM scratch
-COPY --from=builder /app/config /config
-COPY --from=builder /app/migrations /migrations
-COPY --from=builder /bin/app /app
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-CMD ["/app"]
+COPY --from=builder /app/app .
+
+EXPOSE 8080
+
+CMD ["./app"]
