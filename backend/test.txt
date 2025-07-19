@@ -1,0 +1,22 @@
+сперва curl "http://localhost:8080/parse?domain=example.com"
+{"id":1,"domain":"example.com","legal_name":"","country":"","created_at":"2025-07-19T07:47:33.135103537Z"}
+таймаут 20 секунд максимум
+
+затем еще раз curl "http://localhost:8080/parse?domain=example.com"
+{"id":1,"domain":"example.com","legal_name":"","country":"","created_at":"2025-07-19T07:47:33.135103537Z"}
+должен мгновенно
+
+curl "http://localhost:8080/domains?domain=example&limit=5&page=1"
+{"data":[{"id":1,"domain":"example.com","legal_name":"","country":"","created_at":"2025-07-19T07:47:33.135103Z"}],"limit":5,"page":1,"pages":1,"total":1}
+
+curl "http://localhost:8080/domains"
+{"data":[{"id":1,"domain":"example.com","legal_name":"","country":"","created_at":"2025-07-19T07:47:33.135103Z"}],"limit":10,"page":1,"pages":1,"total":1}
+
+curl -X DELETE http://localhost:8080/domains/1
+{"message":"deleted"}
+
+curl "http://localhost:8080/domains"
+{"data":[],"limit":10,"page":1,"pages":0,"total":0}
+
+curl "http://localhost:8080/parse?domain=badsite.abcdef"
+{"error":"parser returned error: Parser failed"}

@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"gorm.io/gorm"
 
 	"parser/internal/model"
@@ -52,4 +54,21 @@ func (r *DomainRepository) GetPaginated(domain string, limit, offset int) ([]mod
 		Find(&domains).Error
 
 	return domains, total, err
+}
+
+
+func (r *DomainRepository) GetByDomain(domain string) (*model.Domain, error) {
+	
+	var d model.Domain
+	if err := r.db.Where("domain = ?", domain).First(&d).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &d, nil
+}
+
+func (r *DomainRepository) TruncateAll() error {
+	return r.db.Exec("TRUNCATE TABLE domains RESTART IDENTITY").Error
 }

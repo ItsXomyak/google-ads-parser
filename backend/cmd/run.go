@@ -38,6 +38,10 @@ func Run() {
 	r.POST("/domains", h.PostDomains)
 	r.GET("/domains", h.GetDomains)
 	r.DELETE("/domains/:id", h.DeleteDomain)
+	r.GET("/parse", h.ParseAndSave)
+	r.POST("/domains/clear", h.CleanData)
+	r.POST("/parse/batch", h.ParseBatch)
+	r.POST("/stream/parse/batch", h.StreamParseBatch)
 
 	r.Run(":8080")
 }

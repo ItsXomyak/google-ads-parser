@@ -72,6 +72,21 @@ func (h *DomainHandler) GetDomains(c *gin.Context) {
 	})
 }
 
+func (h *DomainHandler) ParseAndSave(c *gin.Context) {
+	domain := c.Query("domain")
+	if domain == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing domain"})
+		return
+	}
+
+	entity, err := h.svc.ParseAndSave(domain)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, entity)
+}
 
 
 func (h *DomainHandler) DeleteDomain(c *gin.Context) {
@@ -89,4 +104,48 @@ func (h *DomainHandler) DeleteDomain(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "deleted"})
+}
+
+func (h *DomainHandler) CleanData(c *gin.Context) {
+	if err := h.svc.CleanData(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "db cleaned"})
+}
+
+func (h *DomainHandler) ParseBatch(c *gin.Context) {
+	var req struct {
+		Domains []string `json:"domains"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.Domains) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "domains[] required"})
+		return
+	}
+
+	saved, err := h.svc.ParseBatchAndSave(req.Domains)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, saved)
+}
+
+func (h *DomainHandler) StreamParseBatch(c *gin.Context) {
+	var req struct {
+		Domains []string `json:"domains"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.Domains) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "domains[] required"})
+		return
+	}
+
+	saved, err := h.svc.StreamParseBatchAndSave(req.Domains)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, saved)
 }

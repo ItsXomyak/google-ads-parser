@@ -9,3 +9,10 @@ type Domain struct {
 	Country    string    `json:"country"`
 	CreatedAt  time.Time `json:"created_at"`
 }
+
+type ParsedBatchItem struct {
+	Domain    string `json:"domain"`
+	LegalName string `json:"legal_name"`
+	Country   string `json:"country"`
+	Error     string `json:"error,omitempty"`
+}

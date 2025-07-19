@@ -7,7 +7,6 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 func NewPostgresConnection() (*gorm.DB, error) {
@@ -19,9 +18,7 @@ func NewPostgresConnection() (*gorm.DB, error) {
 		os.Getenv("POSTGRES_DB"),
 	)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info), // логирования запросов скл, по желанию убрать
-	})
+	db, err := gorm.Open(postgres.Open(dsn))
 	
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
