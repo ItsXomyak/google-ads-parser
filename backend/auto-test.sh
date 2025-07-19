@@ -4,48 +4,62 @@ set -e
 
 BASE_URL="http://localhost:8080"
 
-echo " Запрос #1: parse example.com (первый раз, максимум 20 сек)"
+# Очистка базы
+echo "Очищаем базу данных..."
+curl -s -X POST "$BASE_URL/domains/clear"
+echo
+
+# Первый парсинг — должен занять до 20 сек
+echo "Запрос #1: parse batch [example.com] (первый раз)"
 START=$(date +%s)
-response1=$(curl -s --max-time 20 "$BASE_URL/parse?domain=example.com")
+response1=$(curl -s -X POST "$BASE_URL/parse/batch" \
+  -H "Content-Type: application/json" \
+  -d '{"domains": ["example.com"]}')
 END=$(date +%s)
 DURATION=$((END - START))
 
-echo "  Время: $DURATION сек"
-echo " Ответ: $response1"
+echo "Время: $DURATION сек"
+echo "Ответ: $response1"
 echo
 
-echo "🔄 Запрос #2: parse example.com (повторно, должно быть мгновенно)"
+# Повторный запрос — должен быть из базы, быстро
+echo "Запрос #2: parse batch [example.com] (повторно, из БД)"
 START=$(date +%s)
-response2=$(curl -s "$BASE_URL/parse?domain=example.com")
+response2=$(curl -s -X POST "$BASE_URL/parse/batch" \
+  -H "Content-Type: application/json" \
+  -d '{"domains": ["example.com"]}')
 END=$(date +%s)
 DURATION=$((END - START))
 
-echo " Время: $DURATION сек"
-echo " Ответ: $response2"
+echo "Время: $DURATION сек"
+echo "Ответ: $response2"
 echo
 
+# Проверка фильтрации и пагинации
 echo " Проверка фильтрации + пагинации"
 curl -s "$BASE_URL/domains?domain=example&limit=5&page=1"
 echo
 
-echo " Получаем все домены"
+# Получение всех доменов
+echo "Получаем все домены"
 curl -s "$BASE_URL/domains"
 echo
 
-echo " Удаляем домен id=1"
+# Удаление домена по ID (допустим ID=1)
+echo "🗑 Удаляем домен с ID=1"
 curl -s -X DELETE "$BASE_URL/domains/1"
 echo
 
-echo " Проверяем, что домен удалён"
+# Проверка, что домен удалён
+echo "Список доменов после удаления"
 curl -s "$BASE_URL/domains"
 echo
 
-echo " Тест на несуществующий домен (badsite.abcdef)"
-curl -s "$BASE_URL/parse?domain=badsite.abcdef"
+# Некорректный домен
+echo "Тест на невалидный домен: badsite.abcdef"
+curl -s -X POST "$BASE_URL/parse/batch" \
+  -H "Content-Type: application/json" \
+  -d '{"domains": ["badsite.abcdef"]}'
 echo
 
-echo " Тест на очистку всей базы"
-curl -s -X POST "$BASE_URL/domains/clear"
-
-echo
-echo "Программа завершена успешно"
+echo "Все тесты завершены успешно"

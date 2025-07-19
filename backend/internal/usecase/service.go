@@ -26,42 +26,6 @@ type ParsedResult struct {
 	Error     string `json:"error,omitempty"`
 }
 
-func (s *DomainService) ParseAndSave(domain string) (*model.Domain, error) {
-	existing, err := s.repo.GetByDomain(domain)
-	if err == nil && existing != nil {
-	return existing, nil
-	}
-
-	url := fmt.Sprintf("http://parser:3001/parse?domain=%s", domain)
-	
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("http request to parser failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	var result ParsedResult
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("failed to decode parser response: %w", err)
-	}
-	if result.Error != "" {
-		return nil, fmt.Errorf("parser returned error: %s", result.Error)
-	}
-
-	entity := &model.Domain{
-		Domain:    domain,
-		LegalName: result.LegalName,
-		Country:   result.Country,
-	}
-
-
-	if err := s.repo.Save(entity); err != nil {
-		return nil, err
-	}
-
-	return entity, nil
-}
-
 func (s *DomainService) StreamParseBatchAndSave(domains []string) ([]model.Domain, error) {
 	if len(domains) == 0 {
 		return nil, errors.New("no domains provided")
@@ -121,12 +85,48 @@ func (s *DomainService) StreamParseBatchAndSave(domains []string) ([]model.Domai
 }
 
 
-func (s *DomainService) ParseBatchAndSave(domains []string) ([]model.Domain, error) {
+func (s *DomainService) ParseBatchAndSave(domains []string) ([]model.ParsedBatchItem, error) {
 	if len(domains) == 0 {
 		return nil, errors.New("no domains provided")
 	}
 
-	payload := map[string][]string{"domains": domains}
+	var (
+		cachedItems   []model.ParsedBatchItem
+		toParse       []string
+		domainMap     = make(map[string]bool)
+	)
+
+	for _, domain := range domains {
+		domainMap[domain] = true
+		existing, err := s.repo.GetByDomain(domain)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check domain %s: %w", domain, err)
+		}
+		if existing != nil {
+			cachedItems = append(cachedItems, model.ParsedBatchItem{
+				Domain:     existing.Domain,
+				LegalName:  existing.LegalName,
+				Country:    existing.Country,
+			})
+			// исключаем из парсинга
+			domainMap[domain] = false
+		}
+	}
+
+	// отфильтрованные домены
+	for domain, shouldParse := range domainMap {
+		if shouldParse {
+			toParse = append(toParse, domain)
+		}
+	}
+
+	// Если нечего парсить — возвращаем только кэш
+	if len(toParse) == 0 {
+		return cachedItems, nil
+	}
+
+	// --- отправка запроса в Node.js парсер ---
+	payload := map[string][]string{"domains": toParse}
 	body, _ := json.Marshal(payload)
 
 	resp, err := http.Post("http://parser:3001/parse-batch", "application/json", bytes.NewBuffer(body))
@@ -140,32 +140,23 @@ func (s *DomainService) ParseBatchAndSave(domains []string) ([]model.Domain, err
 		return nil, fmt.Errorf("failed to decode parser response: %w", err)
 	}
 
-	var saved []model.Domain
 	for _, item := range parsed {
 		if item.Error != "" {
-			continue // пропускаем невалидные
-		}
-
-		// проверка на дубль
-		existing, err := s.repo.GetByDomain(item.Domain)
-		if err == nil && existing != nil {
-			saved = append(saved, *existing)
 			continue
 		}
-
 		entity := model.Domain{
 			Domain:    item.Domain,
 			LegalName: item.LegalName,
 			Country:   item.Country,
 		}
-
 		if err := s.repo.Save(&entity); err == nil {
-			saved = append(saved, entity)
+			cachedItems = append(cachedItems, item)
 		}
 	}
 
-	return saved, nil
+	return cachedItems, nil
 }
+
 
 func (s *DomainService) Save(domain *model.Domain) error {
 	return s.repo.Save(domain)

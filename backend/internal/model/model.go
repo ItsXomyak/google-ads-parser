@@ -11,8 +11,8 @@ type Domain struct {
 }
 
 type ParsedBatchItem struct {
-	Domain    string `json:"domain"`
-	LegalName string `json:"legal_name"`
-	Country   string `json:"country"`
-	Error     string `json:"error,omitempty"`
+	Domain     string `json:"domain"`
+	LegalName  string `json:"legal_name,omitempty"`
+	Country    string `json:"country,omitempty"`
+	Error      string `json:"error,omitempty"`
 }

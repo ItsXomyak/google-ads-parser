@@ -100,7 +100,7 @@ const scrapeAdvertiser = async domain => {
 		console.error('Ошибка скрейпинга:', e.message)
 		return {
 			domain,
-			error: '❌ Не удалось спарсить данные с сайта.',
+			error: 'Не удалось спарсить данные с сайта.',
 		}
 	} finally {
 		await page.close()
@@ -119,13 +119,13 @@ const scrapeMultipleDomains = async domains => {
 }
 
 process.on('SIGINT', async () => {
-	console.log('🛑 Завершение...')
+	console.log('Завершение...')
 	await closeBrowser()
 	process.exit(0)
 })
 
 process.on('SIGTERM', async () => {
-	console.log('🛑 Завершение...')
+	console.log('Завершение...')
 	await closeBrowser()
 	process.exit(0)
 })
@@ -134,7 +134,7 @@ process.on('SIGTERM', async () => {
 const test = async () => {
 	const domains = ['trust-artamonov.com', 'google.com']
 	const results = await scrapeMultipleDomains(domains)
-	console.log('✅ Результаты:', results)
+	console.log('Результаты:', results)
 	await closeBrowser()
 }
 

@@ -20,3 +20,17 @@ curl "http://localhost:8080/domains"
 
 curl "http://localhost:8080/parse?domain=badsite.abcdef"
 {"error":"parser returned error: Parser failed"}
+
+
+curl -N -X POST http://localhost:8080/parse/batch   -H "Content-Type: application/json"   -d '{"domains": ["example.com", "google.com", "facebook.com"]}'
+[
+  {"domain":"example.com"},
+
+  {"domain":"google.com",
+  "legal_name":"Google LLC.",
+  "country":"Соединенные Штаты Америки"},
+  
+  {"domain":"facebook.com",
+  "legal_name":"Meta Platforms, Inc..",
+  "country":"Соединенные Штаты Америки"}
+]

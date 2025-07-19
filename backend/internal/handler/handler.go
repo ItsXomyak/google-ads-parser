@@ -72,23 +72,6 @@ func (h *DomainHandler) GetDomains(c *gin.Context) {
 	})
 }
 
-func (h *DomainHandler) ParseAndSave(c *gin.Context) {
-	domain := c.Query("domain")
-	if domain == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing domain"})
-		return
-	}
-
-	entity, err := h.svc.ParseAndSave(domain)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, entity)
-}
-
-
 func (h *DomainHandler) DeleteDomain(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -123,15 +106,17 @@ func (h *DomainHandler) ParseBatch(c *gin.Context) {
 		return
 	}
 
-	saved, err := h.svc.ParseBatchAndSave(req.Domains)
+	results, err := h.svc.ParseBatchAndSave(req.Domains)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, saved)
+	c.JSON(http.StatusOK, results)
 }
 
+
+// TODO: починить логику
 func (h *DomainHandler) StreamParseBatch(c *gin.Context) {
 	var req struct {
 		Domains []string `json:"domains"`
