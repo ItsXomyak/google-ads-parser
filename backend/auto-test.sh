@@ -10,11 +10,11 @@ curl -s -X POST "$BASE_URL/domains/clear"
 echo
 
 # Первый парсинг — должен занять до 20 сек
-echo "Запрос #1: parse batch [example.com] (первый раз)"
+echo "Запрос #1: parse batch [trust-artamonov.com] (первый раз)"
 START=$(date +%s)
 response1=$(curl -s -X POST "$BASE_URL/parse/batch" \
   -H "Content-Type: application/json" \
-  -d '{"domains": ["example.com"]}')
+  -d '{"domains": ["trust-artamonov.com"]}')
 END=$(date +%s)
 DURATION=$((END - START))
 
@@ -22,17 +22,29 @@ echo "Время: $DURATION сек"
 echo "Ответ: $response1"
 echo
 
-# Повторный запрос — должен быть из базы, быстро
-echo "Запрос #2: parse batch [example.com] (повторно, из БД)"
+# запрос нескольких доменов
+echo "Запрос #3: parse batch [trust-artamonov.com, google.com, facebook.com]"
 START=$(date +%s)
-response2=$(curl -s -X POST "$BASE_URL/parse/batch" \
+response3=$(curl -s -X POST "$BASE_URL/parse/batch" \
   -H "Content-Type: application/json" \
-  -d '{"domains": ["example.com"]}')
+  -d '{"domains": ["trust-artamonov.com", "google.com", "facebook.com"]}')
 END=$(date +%s)
 DURATION=$((END - START))
 
 echo "Время: $DURATION сек"
-echo "Ответ: $response2"
+echo "Ответ: $response3"
+echo
+
+echo "Запрос #2: parse batch [trust-artamonov.com] (повторно, из БД)"
+START=$(date +%s)
+response2=$(curl -s -X POST "$BASE_URL/parse/batch" \
+  -H "Content-Type: application/json" \
+  -d '{"domains": ["trust-artamonov.com"]}')
+END=$(date +%s)
+DURATION=$((END - START))
+
+echo "Время: $DURATION сек"
+echo "Ответ: $response3"
 echo
 
 # Проверка фильтрации и пагинации

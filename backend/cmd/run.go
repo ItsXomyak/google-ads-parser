@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/gin-contrib/cors"
 
 	"parser/internal/adapter/repository"
 	"parser/internal/handler"
@@ -34,6 +35,7 @@ func Run() {
 	h := handler.NewDomainHandler(svc)
 
 	r := gin.Default()
+	r.Use(cors.Default())
 
 	r.POST("/domains", h.PostDomains)
 	r.GET("/domains", h.GetDomains)

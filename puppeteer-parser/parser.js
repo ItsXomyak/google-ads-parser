@@ -34,8 +34,21 @@ app.post('/parse-batch', async (req, res) => {
 					await new Promise(resolve => setTimeout(resolve, 350))
 					await page.keyboard.press('Tab')
 					await page.keyboard.press('Tab')
+					const urlBeforeEnter = page.url()
 					await page.keyboard.press('Enter')
-					await page.waitForSelector('.metadata', { timeout: 5000 })
+					await new Promise(resolve => setTimeout(resolve, 3000))
+					const urlAfterEnter = page.url()
+					const hasMetadata = await page.$('.metadata')
+
+					if (urlBeforeEnter === urlAfterEnter && !hasMetadata) {
+						await page.close()
+						return {
+							domain,
+							legal_name: 'Ошибка получениях данных',
+							country: 'Ошибка получения данных',
+						}
+					}
+					await page.waitForSelector('.metadata', { timeout: 15000 })
 
 					const result = await page.evaluate(() => {
 						const metadata = document.querySelector('.metadata')
@@ -66,6 +79,7 @@ app.post('/parse-batch', async (req, res) => {
 
 		res.json(results)
 	} catch (e) {
+		console.error(e.message)
 		res.status(500).json({ error: 'batch parse failed', details: e.message })
 	} finally {
 		await browser.close()

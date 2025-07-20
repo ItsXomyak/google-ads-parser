@@ -31,21 +31,19 @@ func (s *DomainService) StreamParseBatchAndSave(domains []string) ([]model.Domai
 		return nil, errors.New("no domains provided")
 	}
 
-	// JSON тело запроса
+	// JSON 
 	payload := map[string][]string{"domains": domains}
 	body, _ := json.Marshal(payload)
 
-	// Запрос к Node.js серверу
+	// запрос к парсеру
 	resp, err := http.Post("http://parser:3001/parse-batch", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to request parser: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Чтение JSON массива поэлементно
 	decoder := json.NewDecoder(resp.Body)
 
-	// Ждём открывающую скобку массива
 	tok, err := decoder.Token()
 	if err != nil || tok != json.Delim('[') {
 		return nil, fmt.Errorf("expected [ token, got %v", tok)
@@ -59,7 +57,7 @@ func (s *DomainService) StreamParseBatchAndSave(domains []string) ([]model.Domai
 			return nil, fmt.Errorf("decode stream item failed: %w", err)
 		}
 		if item.Error != "" {
-			log.Printf("⚠️ error for domain %s: %s", item.Domain, item.Error)
+			log.Printf("error for domain %s: %s", item.Domain, item.Error)
 			continue
 		}
 
@@ -91,9 +89,9 @@ func (s *DomainService) ParseBatchAndSave(domains []string) ([]model.ParsedBatch
 	}
 
 	var (
-		cachedItems   []model.ParsedBatchItem
-		toParse       []string
-		domainMap     = make(map[string]bool)
+		finalResult []model.ParsedBatchItem
+		toParse     []string
+		domainMap   = make(map[string]bool)
 	)
 
 	for _, domain := range domains {
@@ -103,58 +101,60 @@ func (s *DomainService) ParseBatchAndSave(domains []string) ([]model.ParsedBatch
 			return nil, fmt.Errorf("failed to check domain %s: %w", domain, err)
 		}
 		if existing != nil {
-			cachedItems = append(cachedItems, model.ParsedBatchItem{
-				Domain:     existing.Domain,
-				LegalName:  existing.LegalName,
-				Country:    existing.Country,
+			finalResult = append(finalResult, model.ParsedBatchItem{
+				Domain:    existing.Domain,
+				LegalName: existing.LegalName,
+				Country:   existing.Country,
 			})
-			// исключаем из парсинга
 			domainMap[domain] = false
 		}
 	}
 
-	// отфильтрованные домены
 	for domain, shouldParse := range domainMap {
 		if shouldParse {
 			toParse = append(toParse, domain)
 		}
 	}
 
-	// Если нечего парсить — возвращаем только кэш
-	if len(toParse) == 0 {
-		return cachedItems, nil
-	}
+	if len(toParse) > 0 {
+		payload := map[string][]string{"domains": toParse}
+		body, _ := json.Marshal(payload)
 
-	// --- отправка запроса в Node.js парсер ---
-	payload := map[string][]string{"domains": toParse}
-	body, _ := json.Marshal(payload)
-
-	resp, err := http.Post("http://parser:3001/parse-batch", "application/json", bytes.NewBuffer(body))
-	if err != nil {
-		return nil, fmt.Errorf("failed to request parser: %w", err)
-	}
-	defer resp.Body.Close()
-
-	var parsed []model.ParsedBatchItem
-	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
-		return nil, fmt.Errorf("failed to decode parser response: %w", err)
-	}
-
-	for _, item := range parsed {
-		if item.Error != "" {
-			continue
+		resp, err := http.Post("http://parser:3001/parse-batch", "application/json", bytes.NewBuffer(body))
+		if err != nil {
+			return nil, fmt.Errorf("failed to request parser: %w", err)
 		}
-		entity := model.Domain{
-			Domain:    item.Domain,
-			LegalName: item.LegalName,
-			Country:   item.Country,
+		defer resp.Body.Close()
+
+		var parsed []model.ParsedBatchItem
+		if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+			return nil, fmt.Errorf("failed to decode parser response: %w", err)
 		}
-		if err := s.repo.Save(&entity); err == nil {
-			cachedItems = append(cachedItems, item)
+
+		for _, item := range parsed {
+			// Добавляем всегда
+			finalResult = append(finalResult, item)
+
+			if item.Error != "" {
+				continue
+			}
+
+			if item.LegalName == "Ошибка получения данных" && item.Country == "Ошибка получения данных" {
+				continue
+			}
+
+			entity := model.Domain{
+				Domain:    item.Domain,
+				LegalName: item.LegalName,
+				Country:   item.Country,
+			}
+			if err := s.repo.Save(&entity); err != nil {
+				return nil, fmt.Errorf("failed to save domain %s: %w", item.Domain, err)
+			}
 		}
 	}
 
-	return cachedItems, nil
+	return finalResult, nil
 }
 
 
