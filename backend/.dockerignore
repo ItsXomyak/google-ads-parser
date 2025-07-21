@@ -3,6 +3,10 @@
 .gitignore
 .gitattributes
 
+# Docker
+Dockerfile
+docker-compose.yaml
+.dockerignore
 
 # Documentation
 README.md
@@ -35,7 +39,6 @@ main
 *.dll
 *.so
 *.dylib
-node_modules/
 
 # Test binary, built with `go test -c`
 *.test
