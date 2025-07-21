@@ -35,6 +35,18 @@ services:
       - "3001:3001"
 
 
+  # Frontend приложение
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: adspy_frontend
+    restart: unless-stopped
+    ports:
+      - '3000:80'
+    networks:
+      - adspy_network
+
   # Go приложение
   app:
     build:
@@ -60,6 +72,8 @@ services:
       - adspy_network
     # Команда для ожидания готовности базы данных
     command: ['./main']
+
+  
 
   # # Adminer для управления базой данных
   # adminer:
